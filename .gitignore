@@ -1,0 +1,8 @@
+*.elf
+*.self
+test_out
+*.pkg
+build
+*~
+*.sw[ponm]
+asbestos.bin
