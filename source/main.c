@@ -16,6 +16,7 @@
 
 #define HV_BASE                                 0x8000000014000000ULL   // where in lv2 to map lv1
 #define HV_SIZE                                 0x800000
+#define CHUNK	65536
 
 void xputs(const char *msg);
 
@@ -216,8 +217,8 @@ void install_asbestos()
     return;
   }
 
-  size_t sz;
-  void *data = read_file(f, &sz);
+  size_t sz, sz1;
+  u8 *data = (u8 *) read_file(f, &sz);
   if (!data)
   {
     xputs("Cannot read AsbestOS binary!");
@@ -227,7 +228,6 @@ void install_asbestos()
 
   unlink("/dev_rwflash/lv2_kernel.self");
   
-  xputs("Writing AsbestOS...");
   FILE *g = fopen("/dev_rwflash/lv2_kernel.self", "w");
 
   if (!g)
@@ -237,7 +237,23 @@ void install_asbestos()
     return;
   }
 
-  fwrite(data, sz, 1, g);
+  sz1 = sz;
+
+  while (sz > 0)
+  {
+    sprintf (ts, "Writing AsbestOS: %02d%%", (int) ((sz1 - sz) * 100 / sz1));
+    xputs(ts);
+    if (sz >= CHUNK)
+    {
+      fwrite(data + (sz1 - sz), CHUNK, 1, g);
+      sz -= CHUNK;
+    }
+    else
+    {
+      fwrite(data + (sz1 - sz), sz, 1, g);
+      sz = 0;
+    }
+  }
   fclose (f);
   fclose (g);
 
@@ -254,6 +270,7 @@ void install_asbestos()
   fprintf (f, "%08lX: 7973302f6c76325f\n", i + 8);
   fprintf (f, "%08lX: 6b65726e656c2e73\n", i + 16);
   fprintf (f, "%08lX: 656c6600\n", i + 24);
+  fprintf (f, "%08lX: 000000000000001b\n", i + 0x120);
   fputs ("lv1dis\n", f);
   fputs ("panic\n", f);
   fclose (f);
@@ -294,7 +311,7 @@ void xputs(const char *msg)
   if (y >= 470)
   {
     memmove(buffers[currentBuffer]->ptr,
-            buffers[currentBuffer]->ptr + res.width * 40 * sizeof(u32), 
+            buffers[currentBuffer]->ptr + res.width * 40,
 	    res.width * (res.height - 40) * sizeof(u32));
     y -= 40;
   }
@@ -304,7 +321,8 @@ void xputs(const char *msg)
       buffers[currentBuffer]->ptr[i * res.width + j] =
         FONT_COLOR_BLACK;
   print(150, y, msg, buffers[currentBuffer]->ptr);
-  y += 40;
+  if (msg[strlen(msg+1)] != '%')
+    y += 40;
   flip(currentBuffer);
   currentBuffer = !currentBuffer;
 }
