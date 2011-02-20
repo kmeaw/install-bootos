@@ -18,7 +18,7 @@ LIBS		:=	-lnet -lgcm_sys -lreality -lsysutil -lio -lm -lsysmodule
 
 APPEGO		:=	KM0001
 APPTITLE	:=	AsbestOS installer
-APPVERSION	:=	0000000
+APPVERSION	:=	0000200
 APPID		:=	LNX000001
 APPRAND		:=	$(shell openssl rand -hex 4 | tr [:lower:] [:upper:])
 CONTENTID	:=	$(APPEGO)-$(APPID)_00-0$(APPVERSION)$(APPRAND)
