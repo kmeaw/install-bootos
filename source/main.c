@@ -20,6 +20,9 @@
 
 void xputs(const char *msg);
 
+VideoConfiguration vconfig;
+VideoState state;
+
 unsigned char *read_file(FILE * f, size_t * sz)
 {
 	if (!f)
@@ -124,13 +127,11 @@ void init_screen()
 	context = realityInit(0x10000, 1024 * 1024, host_addr);
 	assert(context != NULL);
 
-	VideoState state;
 	assert(videoGetState(0, 0, &state) == 0);
 	assert(state.state == 0);
 
 	assert(videoGetResolution(state.displayMode.resolution, &res) == 0);
 
-	VideoConfiguration vconfig;
 	memset(&vconfig, 0, sizeof(VideoConfiguration));
 	vconfig.resolution = state.displayMode.resolution;
 	vconfig.format = VIDEO_BUFFER_FORMAT_XRGB;
@@ -274,6 +275,12 @@ void install_asbestos()
   fputs ("lv1dis\n", f);
   fputs ("panic\n", f);
   fclose (f);
+
+  xputs("Creating kboot configuration file...");
+  f = fopen("/dev_hdd0/kboot.conf", "w");
+  fputs ("timeout=20\n", f);
+  fputs ("Install Debian GNU/Linux=http://ftp.debian.org/debian/dists/squeeze/main/installer-powerpc/current/images/powerpc64/netboot/vmlinux initrd=http://ftp.debian.org/debian/dists/squeeze/main/installer-powerpc/current/images/powerpc64/netboot/initrd.gz x=1 video=ps3fb:mode:131 preseed/url=http://ps3linux.ipq.co/mod/preseed.cfg auto=true interface=auto priority=critical\n", f);
+  fclose(f);
 
   /*
   xputs("Creating 10G file...");
