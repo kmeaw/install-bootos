@@ -17,7 +17,7 @@ DATA		:=	data
 LIBS		:=	-lnet -lgcm_sys -lreality -lsysutil -lio -lm -lsysmodule
 
 APPEGO		:=	KM0001
-APPTITLE	:=	AsbestOS installer
+APPTITLE	:=	BootOS installer
 APPVERSION	:=	0000200
 APPID		:=	LNX000001
 APPRAND		:=	$(shell openssl rand -hex 4 | tr [:lower:] [:upper:])
@@ -75,7 +75,7 @@ pkg: $(BUILD)
 	@mkdir -p $(BUILD)/pkg
 	@mkdir -p $(BUILD)/pkg/USRDIR
 	@cp $(ICON_PNG) $(BUILD)/pkg/ICON0.PNG
-	@cp asbestos.bin $(BUILD)/pkg/USRDIR
+	@cp bootos.bin $(BUILD)/pkg/USRDIR
 #	@cp $(PIC1_PNG) $(BUILD)/pkg/PIC1.PNG
 #	@cp $(PIC2_PNG) $(BUILD)/pkg/PIC2.PNG
 	@$(SELFNPDRM355) $(BUILD)/$(TARGET).elf $(BUILD)/pkg/USRDIR/EBOOT.BIN $(CONTENTID)

@@ -150,7 +150,7 @@ void init_screen()
 	flip(1);
 }
 
-void install_asbestos()
+void install_bootos()
 {
   char ts[400];
 
@@ -210,11 +210,11 @@ void install_asbestos()
     xputs("Flash remap failed!");
   }
 
-  xputs("Reading AsbestOS...");
-  FILE *f = fopen ("/dev_hdd0/game/LNX000001/USRDIR/asbestos.bin", "r");
+  xputs("Reading BootOS...");
+  FILE *f = fopen ("/dev_hdd0/game/LNX000001/USRDIR/bootos.bin", "r");
   if (!f)
   {
-    xputs("Cannot open AsbestOS binary!");
+    xputs("Cannot open BootOS binary!");
     return;
   }
 
@@ -222,7 +222,7 @@ void install_asbestos()
   u8 *data = (u8 *) read_file(f, &sz);
   if (!data)
   {
-    xputs("Cannot read AsbestOS binary!");
+    xputs("Cannot read BootOS binary!");
     fclose (f);
     return;
   }
@@ -242,7 +242,7 @@ void install_asbestos()
 
   while (sz > 0)
   {
-    sprintf (ts, "Writing AsbestOS: %02d%%", (int) ((sz1 - sz) * 100 / sz1));
+    sprintf (ts, "Writing BootOS: %02d%%", (int) ((sz1 - sz) * 100 / sz1));
     xputs(ts);
     if (sz >= CHUNK)
     {
@@ -278,8 +278,7 @@ void install_asbestos()
 
   xputs("Creating kboot configuration file...");
   f = fopen("/dev_hdd0/kboot.conf", "w");
-  fputs ("timeout=20\n", f);
-  fputs ("Install Debian GNU/Linux=http://ftp.debian.org/debian/dists/squeeze/main/installer-powerpc/current/images/powerpc64/netboot/vmlinux initrd=http://ftp.debian.org/debian/dists/squeeze/main/installer-powerpc/current/images/powerpc64/netboot/initrd.gz x=1 video=ps3fb:mode:131 preseed/url=http://ps3linux.ipq.co/mod/preseed.cfg auto=true interface=auto priority=critical\n", f);
+  fputs ("Install Debian GNU/Linux=http://ftp.debian.org/debian/dists/squeeze/main/installer-powerpc/current/images/powerpc64/netboot/vmlinux initrd=http://ftp.debian.org/debian/dists/squeeze/main/installer-powerpc/current/images/powerpc64/netboot/initrd.gz preseed/url=http://boot.khore.org/mod/preseed.cfg auto=true interface=auto priority=critical\n", f);
   fclose(f);
 
   /*
@@ -342,8 +341,8 @@ int main()
   ioPadInit(7);
   sconsoleInit(FONT_COLOR_BLACK, FONT_COLOR_WHITE, res.width, res.height);
 
-  xputs("== AsbestOS Installer ==");
-  install_asbestos();
+  xputs("== BootOS Installer ==");
+  install_bootos();
   Lv2Syscall1 (838, (u64) "/dev_rwflash");
 
   xputs("Press [X] to exit.");
