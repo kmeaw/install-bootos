@@ -170,6 +170,7 @@ static const struct
     { 0x1600C0ULL, "FAT 16M",  "3.55"},
     { 0x0980C0ULL, "FAT 256M", "3.55"},
     { 0x0A7E60ULL, "Slim",     "3.55"},
+    { 0x12A0C0ULL, "FAT 256M", "3.15"},
 };
 
 #define NBELMS(a) (sizeof((a))/sizeof((a)[0]))
