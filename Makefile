@@ -5,6 +5,10 @@ endif
 
 include $(PSL1GHT)/Makefile.base
 
+ifndef FIRMWARE
+FIRMWARE=355
+endif
+
 SED		?=	sed
 SELFNPDRM355	:=	make_self_npdrm
 PKG355		:=	package_finalize
@@ -28,9 +32,7 @@ PIC1_PNG	:=	pkg/pic1.png
 #PIC2_PNG	:=	pkg/pic2.png
 
 CFLAGS		+= -g -O2 -Wall --std=gnu99 -D__POWERPC__ -DDEBUG=0
-ifdef FIRMWARE
 CFLAGS          += -DFIRMWARE=$(FIRMWARE)
-endif
 CXXFLAGS	+= -g -O2 -Wall -D__POWERPC__ -DDEBUG=0
 
 ifneq ($(BUILD),$(notdir $(CURDIR)))
