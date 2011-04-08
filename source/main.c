@@ -201,6 +201,8 @@ void install_bootos()
     return;
   }
 
+  // Lv2Patcher works on mapped memory
+  i += HV_BASE;
   i &= 0xFFFFFFFFULL;
 
   if (Lv2Syscall8 (837, (u64) "CELL_FS_IOS:BUILTIN_FLSH1", (u64) "CELL_FS_FAT", (u64) "/dev_rwflash", 0, 0, 0, 0, 0))
