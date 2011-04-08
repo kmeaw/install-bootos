@@ -15,7 +15,7 @@
 #include "mm.h"
 
 #define CHUNK 65536
-#define QUICK_SCAN 1
+#define QUICK_SCAN 0
 
 void
 xputs(
@@ -160,12 +160,28 @@ init_screen()
     flip(1);
 }
 
+static const struct
+{
+    uint64_t offset;
+    const char* type;
+    const char* fw;
+} s_known_platforms[] =
+{
+    { 0x1600C0ULL, "FAT 16M",  "3.55"},
+    { 0x0980C0ULL, "FAT 256M", "3.55"},
+    { 0x0A7E60ULL, "Slim",     "3.55"},
+};
+
+#define NBELMS(a) (sizeof((a))/sizeof((a)[0]))
+
 void
 install_bootos()
 {
     char ts[400];
 
-    u64 i;
+    uint64_t lv2_kernel_filename_offset = 0;
+    int found = 0;
+    int i;
 
     xputs("Mapping LV1...");
     install_new_poke();
@@ -173,50 +189,73 @@ install_bootos()
         xputs("Cannot map LV1!");
         return;
     }
+
+    /* First try quickscanning the PS3_LPAR kernel filename */
     if (QUICK_SCAN) {
-        xputs("Quickscanning LV1...");
-        if (lv1_peek(0x1600C0ULL) == 0x2F666C682F6F732FULL) {
-            i = 0x1600C0ULL;
-        } else if (lv1_peek(0x980C0ULL) == 0x2F666C682F6F732FULL) {
-            i = 0x980C0ULL;
-        } else if (lv1_peek(0xA7E60ULL) == 0x2F666C682F6F732FULL) {
-            i = 0xA7E60ULL;
+        xputs("Quickscanning LV1 PS3_LPAR kernel filename at known offsets...");
+        found = 0;
+        for (i=0; i<NBELMS(s_known_platforms); i++) {
+            if (   lv1_peek(s_known_platforms[i].offset)   == 0x2F666C682F6F732FULL
+                && lv1_peek(s_known_platforms[i].offset+8) == 0x6C76325F6B65726EULL) {
+                lv2_kernel_filename_offset = s_known_platforms[i].offset;
+                found = 1;
+                break;
+            }
         }
-    } else {
-        u64 q1 = 0;
-        u64 q2 = 0;
-        xputs("Scanning LV1...");
-        for (i = 0; i < HV_SIZE; i += 8) {
+    }
+    if (!found) {
+        uint64_t q1 = 0;
+        uint64_t q2 = 0;
+        uint64_t ten = 0;
+        for (i=0; i<HV_SIZE; i+=8) {
+            if (10 * ten > HV_SIZE) {
+                snprintf(ts, sizeof(ts),
+                         "Scanning LV1 PS3_LPAR kernel filename on full LV1 "
+                         "address space... %08llX %02d%%",
+                         i&0xFFFFFFFFULL, (int)(i*(uint64_t)100/HV_SIZE));
+                xputs(ts);
+                ten -= HV_SIZE/10;
+            }
             q2 = lv1_peek(i);
-            if (q1 == 0x2F666C682F6F732FULL && q2 == 0x6C76325F6B65726E) {
-                i -= 8;
+            if (q1 == 0x2F666C682F6F732FULL && q2 == 0x6C76325F6B65726EULL) {
+                lv2_kernel_filename_offset = i - 8;
+                found = 1;
                 break;
             }
             q1 = q2;
+            ten += 8;
         }
     }
     xputs("Unmapping LV1...");
     unmap_lv1();
     remove_new_poke();
 
-    snprintf(ts, sizeof(ts), "LV1 PS3_LPAR kernel filename offset at %08llX.", i & 0xFFFFFFFFULL);
-    xputs(ts);
-    if (i == 0x1600C0ULL) {
-        xputs("Patch: PS3 FAT 16M + FW3.55.");
-    } else if (i == 0x980C0ULL) {
-        xputs("Patch: PS3 FAT 256M + FW3.55.");
-    } else if (i == 0xA7E60ULL) {
-        xputs("Patch: PS3 Slim + FW3.55.");
-    } else {
-        xputs("Unknown LV1 offset. Please report!");
-    }
-    if (i >= HV_SIZE) {
-        xputs("Cannot generate a patch :( Please report your PS3 model.");
+    if (!found) {
+        xputs("No LV1 PS3_LPAR kernel filename found.");
         return;
     }
-    // Lv2Patcher works on mapped memory
-    i += HV_BASE;
-    i &= 0xFFFFFFFFULL;
+
+    snprintf(ts, sizeof(ts), "LV1 PS3_LPAR kernel filename offset at %08llX.",
+             lv2_kernel_filename_offset & 0xFFFFFFFFULL);
+    xputs(ts);
+    found = 0;
+    for (i=0; i<NBELMS(s_known_platforms); i++) {
+        if (lv2_kernel_filename_offset == s_known_platforms[i].offset) {
+            snprintf(ts, sizeof(ts), "Detected a PS3 %s running FW %s",
+                     s_known_platforms[i].type, s_known_platforms[i].fw);
+            xputs(ts);
+            found = 1;
+            break;
+        }
+    }
+    if (!found) {
+        xputs("Please report your PS3 model, its firmware version and the offset found.");
+    }
+
+    // Lv2Patcher works on mapped memory for lv1, and doesn't account for base offset (1<<63)
+    lv2_kernel_filename_offset += HV_BASE;
+    lv2_kernel_filename_offset &= 0xFFFFFFFFULL;
+
     if ( Lv2Syscall8(837, (u64)"CELL_FS_IOS:BUILTIN_FLSH1", (u64)"CELL_FS_FAT", (u64)"/dev_rwflash", 0, 0, 0, 0, 0) ) {
         xputs("Flash remap failed!");
     }
@@ -263,11 +302,11 @@ install_bootos()
         return;
     }
     fputs("# Linux\nlv1en\n", f);
-    fprintf(f, "%08lX: 2f6c6f63616c5f73\n", i);
-    fprintf(f, "%08lX: 7973302f6c76325f\n", i + 8);
-    fprintf(f, "%08lX: 6b65726e656c2e73\n", i + 16);
-    fprintf(f, "%08lX: 656c6600\n", i + 24);
-    fprintf(f, "%08lX: 000000000000001b\n", i + 0x120);
+    fprintf(f, "%08lX: 2f6c6f63616c5f73\n", lv2_kernel_filename_offset);
+    fprintf(f, "%08lX: 7973302f6c76325f\n", lv2_kernel_filename_offset + 8);
+    fprintf(f, "%08lX: 6b65726e656c2e73\n", lv2_kernel_filename_offset + 16);
+    fprintf(f, "%08lX: 656c6600\n",         lv2_kernel_filename_offset + 24);
+    fprintf(f, "%08lX: 000000000000001b\n", lv2_kernel_filename_offset + 0x120);
     fputs("lv1dis\n", f);
     fputs("panic\n", f);
     fclose(f);
