@@ -1,38 +1,71 @@
 #include <psl1ght/lv2.h>
+
 #include "peek_poke.h"
+#include "hvcall.h"
+#include "syscall_patch.h"
 
-#define NEW_POKE_SYSCALL		813                  	// which syscall to overwrite with new poke
-#define NEW_POKE_SYSCALL_ADDR	0x8000000000195A68ULL	// where above syscall is in lv2
+static int poke_syscall = SC_POKE;
 
-int poke_syscall = 7;
-
-u64 lv2_peek(u64 address)
+uint64_t
+lv2_peek(
+    uint64_t address)
 {
-	return Lv2Syscall1(6, address);
+    return Lv2Syscall1(SC_PEEK, address);
 }
 
-void lv2_poke(u64 address, u64 value)
+void
+lv2_poke(
+    uint64_t address,
+    uint64_t value)
 {
-	Lv2Syscall2(poke_syscall, address, value);
+    Lv2Syscall2(poke_syscall, address, value);
 }
 
-void lv2_poke32(u64 address, u32 value)
+void
+lv2_poke32(
+    uint64_t address,
+    uint32_t value)
 {
-	u32 next = lv2_peek(address) & 0xffffffff;
-	lv2_poke(address, (u64) value << 32 | next);
+    uint32_t next = lv2_peek(address) & 0xffffffff;
+    lv2_poke(address, (uint64_t) value << 32 | next);
 }
 
-void install_new_poke()
+uint64_t
+lv1_peek(
+    uint64_t address)
 {
-	// install poke with icbi instruction
-	lv2_poke(NEW_POKE_SYSCALL_ADDR, 0xF88300007C001FACULL);
-	lv2_poke(NEW_POKE_SYSCALL_ADDR + 8, 0x4C00012C4E800020ULL);
-	poke_syscall = NEW_POKE_SYSCALL;
+    return Lv2Syscall1(SC_PEEK, HV_BASE + address);
 }
 
-void remove_new_poke()
+void
+lv1_poke(
+    uint64_t address,
+    uint64_t value)
 {
-	poke_syscall = 7;
-	lv2_poke(NEW_POKE_SYSCALL_ADDR, 0xF821FF017C0802A6ULL);
-	lv2_poke(NEW_POKE_SYSCALL_ADDR + 8, 0xFBC100F0FBE100F8ULL);
+    Lv2Syscall2(SC_POKE, HV_BASE + address, value);
+}
+
+static struct syscall_patch_ctx poke_ctx;
+
+void
+install_new_poke()
+{
+
+    /* Shell code is:
+     * std  r4,0(r3)
+     * icbi r0,r3
+     * isync
+     * blr */
+    static const uint64_t shell_code[] = {
+        0xF88300007C001FACULL, 0x4C00012C4E800020ULL
+    };
+    syscall_patch(&poke_ctx, SC_SLOT_1, 2, shell_code);
+    poke_syscall = SC_SLOT_1;
+}
+
+void
+remove_new_poke()
+{
+    poke_syscall = SC_POKE;
+    syscall_unpatch(&poke_ctx);
 }

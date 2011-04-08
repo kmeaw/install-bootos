@@ -14,8 +14,6 @@
 #include "peek_poke.h"
 #include "mm.h"
 
-#define HV_BASE                                 0x8000000014000000ULL   // where in lv2 to map lv1
-#define HV_SIZE                                 0x800000
 #define CHUNK	65536
 
 void xputs(const char *msg);
@@ -165,18 +163,18 @@ void install_bootos()
   }
 
   xputs("Quickscanning LV1...");
-  if (lv2_peek(0x80000000141600C0ULL) == 0x2F666C682F6F732FULL)
-    i = 0x80000000141600C0ULL;
-  else if (lv2_peek(0x80000000140980C0ULL) == 0x2F666C682F6F732FULL)
-    i = 0x80000000140980C0ULL;
-  else if (lv2_peek(0x80000000140A7E60ULL) == 0x2F666C682F6F732FULL)
-    i = 0x80000000140A7E60ULL;
+  if (lv1_peek(0x1600C0ULL) == 0x2F666C682F6F732FULL)
+    i = 0x1600C0ULL;
+  else if (lv1_peek(0x980C0ULL) == 0x2F666C682F6F732FULL)
+    i = 0x980C0ULL;
+  else if (lv1_peek(0xA7E60ULL) == 0x2F666C682F6F732FULL)
+    i = 0xA7E60ULL;
   else
   {
     xputs("Scanning LV1...");
-    for (i = (u64)HV_BASE; i < HV_BASE + HV_SIZE; i += 8) {
-      quad = lv2_peek(i);
-      if(quad == 0x2F666C682F6F732FULL && lv2_peek(i + 8) == 0x6C76325F6B65726E)
+    for (i=0; i<HV_SIZE; i+=8) {
+      quad = lv1_peek(i);
+      if(quad == 0x2F666C682F6F732FULL && lv1_peek(i + 8) == 0x6C76325F6B65726E)
 	break;
     }
   }
@@ -185,11 +183,11 @@ void install_bootos()
   unmap_lv1();
   remove_new_poke();
 
-  if (i == 0x80000000141600C0ULL)
+  if (i == 0x1600C0ULL)
     xputs("Patch: PS3 FAT 16M.");
-  else if (i == 0x80000000140980C0ULL)
+  else if (i == 0x980C0ULL)
     xputs("Patch: PS3 FAT 256M.");
-  else if (i == 0x80000000140A7E60ULL)
+  else if (i == 0xA7E60ULL)
     xputs("Patch: PS3 Slim.");
   else
   {
@@ -197,7 +195,7 @@ void install_bootos()
     xputs(ts);
   }
 
-  if (i >= HV_BASE + HV_SIZE)
+  if (i >= HV_SIZE)
   {
     xputs("Cannot generate a patch :( Please report your PS3 model.");
     return;

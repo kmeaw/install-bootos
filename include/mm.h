@@ -1,7 +1,27 @@
 #ifndef MM_H
 #define MM_H
 
-int mm_insert_htab_entry(u64 va_addr, u64 lpar_addr, u64 prot, u64 *index);
-int mm_map_lpar_memory_region(u64 lpar_start_addr, u64 ea_start_addr, u64 size, u64 page_shift, u64 prot);
+#include <stdint.h>
+#include <stddef.h>
+
+extern int
+mm_insert_htab_entry(
+    uint64_t  va_addr,
+    uint64_t  lpar_addr,
+    uint64_t  prot,
+    uint64_t* index);
+
+extern int
+mm_map_lpar_memory_region(
+    uint64_t lpar_start_addr,
+    uint64_t ea_start_addr,
+    uint64_t size,
+    uint64_t page_shift,
+    uint64_t prot);
+
+extern void*
+lv1_alloc(
+    size_t sz,
+    void*  addr);
 
 #endif
