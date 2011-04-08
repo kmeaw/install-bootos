@@ -1,6 +1,6 @@
 <?xml version="1.0" ?>
 <sfo>
-	<value name="APP_VER" type="string">02.00</value>
+	<value name="APP_VER" type="string">03.00</value>
 	<value name="ATTRIBUTE" type="integer">
 		0
 	</value>
@@ -26,10 +26,10 @@
 		279
 	</value>
 	<value name="TITLE" type="string">
-		PEM test tool
+		Linux Petitboot installer
 	</value>
 	<value name="TITLE_ID" type="string">
 		MNT000001
 	</value>
-	<value name="VERSION" type="string">02.00</value>
+	<value name="VERSION" type="string">03.00</value>
 </sfo>
