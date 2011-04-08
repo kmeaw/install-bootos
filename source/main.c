@@ -15,6 +15,7 @@
 #include "mm.h"
 
 #define CHUNK	65536
+#define QUICK_SCAN 1
 
 void xputs(const char *msg);
 
@@ -152,7 +153,7 @@ void install_bootos()
 {
   char ts[400];
 
-  u64 quad, i;
+  u64 i;
  
   xputs("Mapping LV1...");
   install_new_poke();
@@ -162,37 +163,43 @@ void install_bootos()
     return;
   }
 
-  xputs("Quickscanning LV1...");
-  if (lv1_peek(0x1600C0ULL) == 0x2F666C682F6F732FULL)
-    i = 0x1600C0ULL;
-  else if (lv1_peek(0x980C0ULL) == 0x2F666C682F6F732FULL)
-    i = 0x980C0ULL;
-  else if (lv1_peek(0xA7E60ULL) == 0x2F666C682F6F732FULL)
-    i = 0xA7E60ULL;
-  else
-  {
+  if (QUICK_SCAN) {
+    xputs("Quickscanning LV1...");
+    if (lv1_peek(0x1600C0ULL) == 0x2F666C682F6F732FULL)
+      i = 0x1600C0ULL;
+    else if (lv1_peek(0x980C0ULL) == 0x2F666C682F6F732FULL)
+      i = 0x980C0ULL;
+    else if (lv1_peek(0xA7E60ULL) == 0x2F666C682F6F732FULL)
+      i = 0xA7E60ULL;
+  } else {
+    u64 q1 = 0;
+    u64 q2 = 0;  
     xputs("Scanning LV1...");
     for (i=0; i<HV_SIZE; i+=8) {
-      quad = lv1_peek(i);
-      if(quad == 0x2F666C682F6F732FULL && lv1_peek(i + 8) == 0x6C76325F6B65726E)
+      q2 = lv1_peek(i);
+      if (q1 == 0x2F666C682F6F732FULL && q2 == 0x6C76325F6B65726E) {
+        i-=8;
 	break;
+      }
+      q1 = q2;
     }
   }
-
   xputs("Unmapping LV1...");
   unmap_lv1();
   remove_new_poke();
 
+  snprintf(ts, sizeof(ts), "LV1 PS3_LPAR kernel filename offset at %08llX.", i & 0xFFFFFFFFULL);
+  xputs(ts);
+
   if (i == 0x1600C0ULL)
-    xputs("Patch: PS3 FAT 16M.");
+    xputs("Patch: PS3 FAT 16M + FW3.55.");
   else if (i == 0x980C0ULL)
-    xputs("Patch: PS3 FAT 256M.");
+    xputs("Patch: PS3 FAT 256M + FW3.55.");
   else if (i == 0xA7E60ULL)
-    xputs("Patch: PS3 Slim.");
+    xputs("Patch: PS3 Slim + FW3.55.");
   else
   {
-    snprintf(ts, sizeof(ts), "Unknown LV1, code = %08llX. Please report!", i & 0xFFFFFFFFULL);
-    xputs(ts);
+    xputs("Unknown LV1 offset. Please report!");
   }
 
   if (i >= HV_SIZE)
